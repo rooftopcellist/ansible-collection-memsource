@@ -43,7 +43,22 @@
   with_items: "{{ languages | default('*') }}"
   changed_when: false
 
-- name: Pre_translation shell script
+- name: If Custom script is provided, copy it into the clone and execute it (assumes local script, not part of clone)
+  block:
+    - name: Create tools/scripts/l18n directory if needed
+      ansible.builtin.file:
+        path: "{{ clone_directory.path }}/tools/scripts/l18n"
+        state: directory
+        mode: 0775
+
+    - name: Copy Script into clone
+      copy:
+        src: "{{ local_shell_script_path }}"
+        dest: "{{ clone_directory.path }}/tools/scripts/l18n/post_translation.sh"
+  when:
+    - local_shell_script_path is defined
+
+- name: Post_translation shell script
   block:
     - name: Permissions for Script
       ansible.builtin.file:
@@ -51,5 +66,7 @@
         mode: '0755'
 
     - name: Run Script
-      ansible.builtin.shell: cd {{ role_path }}/files/_clones/{{ component }} && ./{{ shell_script_path }}
+      ansible.builtin.shell: "source {{ shell_script_path }}"
+      args:
+        chdir: "{{ role_path }}/files/_clones/{{ component }}"
       changed_when: false
